@@ -6,7 +6,7 @@ void printarTabuleiro(int tabuleiro[9][9]);
 
 int menu(){
     int opcao;
-    
+    system("clear");
     printf("----BEM VINDO AO SUDOKU----\n");
     printf("1-Carregar jogo \n2-Novo Jogo Aleatorio \n3-Sair\n");
     scanf("%d", &opcao);
@@ -54,12 +54,12 @@ int menuJogada(int jogo[9][9]){
     printf("1-Adicionar Jogada\n");
     printf("2-Remover Jogada\n");
     printf("3-Salvar Jogo\n");
-    printf("4-Conferir Jogo\n");
-    printf("5-Mostrar Resposta\n");
-    printf("6-Voltar\n");
+    printf("4-Voltar\n");
+    printf("5-Conferir\n");
+    printf("6-Sair do jogo\n");
     scanf("%d", &opcao);
 
-    if (opcao != 1 && opcao != 2 && opcao != 3 && opcao != 4 && opcao !=5 && opcao !=6){
+    if (opcao != 1 && opcao != 2 && opcao != 3 && opcao != 4 && opcao != 5 && opcao != 6){
         system("clear");
         printarTabuleiro(jogo);
         printf("OPCAO INVALIDA\n");
@@ -75,10 +75,8 @@ void removerJogada(int jogo[9][9], int mascara[9][9]){
     scanf("%d %d", &linha, &coluna);
     if ((linha <= 9 && linha > 0) && (coluna <= 9 && coluna > 0)){
        if(mascara[linha-1][coluna-1] == 0){
-
-           jogo[linha-1][coluna-1] = 0 ;
-
-        }else{
+           jogo[linha-1][coluna-1] = 0;
+       }else{
            printf("Posicao Fixa!\n");
            removerJogada(jogo, mascara);
        }
@@ -88,6 +86,50 @@ void removerJogada(int jogo[9][9], int mascara[9][9]){
     }
 }
 
+void salvarJogo(int jogoSalvo[9][9], int jogoResolvido[9][9], int mascara[9][9]){
+    FILE * savedGame;
+    savedGame = fopen("savedGame.txt", "w");
+
+    //salva o tabuleiro no estado atual
+    for(int i = 0; i < 9; i++){
+        for(int j = 0; j < 9; j++){
+            if(jogoSalvo[i][j] == 0){
+                fprintf(savedGame, ".");
+            }else{
+                fprintf(savedGame, "%d", jogoSalvo[i][j]);
+            }
+        }
+        fprintf(savedGame, "\n");
+    }
+
+    fprintf(savedGame, "\n");
+
+    //salva a solucao do tabuleiro principal
+    for(int i = 0; i < 9; i++){
+        for(int j = 0; j < 9; j++){
+            fprintf(savedGame, "%d", jogoResolvido[i][j]);
+        }
+        fprintf(savedGame, "\n");
+    }
+
+    fprintf(savedGame, "\n");
+
+    //salva a mascara
+    for(int i = 0; i < 9; i++){
+        for(int j = 0; j < 9; j++){
+            if(mascara[i][j] == 0){
+                fprintf(savedGame, ".");
+            }else{
+                fprintf(savedGame, "%d", mascara[i][j]);
+            }
+        }
+        fprintf(savedGame, "\n");
+    }
+
+    fclose(savedGame);
+    printf("Jogo Salvo\n");
+
+}
 
 void adicionarJogada(int jogo[9][9], int mascara[9][9]){
     int linha,coluna,valor;
@@ -105,21 +147,143 @@ void adicionarJogada(int jogo[9][9], int mascara[9][9]){
         printf("Posicao ou valor invalidos!\n");
         adicionarJogada(jogo, mascara);
     }
+
 } 
 
-void printarTabuleiro(int tabuleiro[9][9]){
-    system("clear");
+void carregarJogo(int jogo[9][9], int mascara[9][9], int jogoResolvido[9][9], time_t start){
+    FILE *jogoSalvo;
+    jogoSalvo = fopen("savedGame.txt", "r");
+
+
+    char c;
     for(int i = 0; i < 9; i++){
         for(int j = 0; j < 9; j++){
-            if( tabuleiro[i][j] == 0){
-                printf("|   ");
+            fscanf(jogoSalvo,"%c", &c);
+            if(c == '.'){
+                jogo[i][j] = 0;
+
             }else{
-                printf("| %d ", tabuleiro[i][j]);
+                jogo[i][j] = atoi(&c);
+            }
+        }
+        fscanf(jogoSalvo,"%c", &c);
+    }
+    
+    //ler o \n
+    fscanf(jogoSalvo,"%c", &c);
+
+    //jogo resolvido
+    for(int i = 0; i < 9; i++){
+        for(int j = 0; j < 9; j++){
+            fscanf(jogoSalvo,"%c", &c);
+            jogoResolvido[i][j] = atoi(&c);
+        }
+        fscanf(jogoSalvo,"%c", &c);
+    }
+
+    //ler o \n
+    fscanf(jogoSalvo,"%c", &c);
+
+    for(int i = 0; i < 9; i++){
+        for(int j = 0; j < 9; j++){
+            fscanf(jogoSalvo,"%c", &c);
+            if(c == '.'){
+                mascara[i][j] = 0;
+
+            }else{
+                mascara[i][j] = atoi(&c);
+            }
+        }
+        fscanf(jogoSalvo,"%c", &c);
+    }
+    fclose(jogoSalvo);
+    start = time(NULL);
+}
+
+
+void conferirJogo(int jogo[9][9], int jogoResolvido[9][9], time_t start){
+    int jogoIncorreto = 0;
+
+    time_t dif = time(NULL) - start;
+    int minutes = dif/60;
+    int seconds = dif%60;
+
+    for(int i = 0; i < 9; i++){
+        for(int j = 0; j < 9; j++){
+
+            if( jogo[i][j] == 0 ){
+                printf("Jogo nao completo!\n");
+                return;
+            }else{
+                
+                if(jogo[i][j] != jogoResolvido[i][j]){
+                    jogoIncorreto = 1;
+                }
             }
 
+            
         }
-        printf("|");
-        printf("\n-------------------------------------\n");
+    }
+    if( jogoIncorreto == 1){
+        printf("O jogo esta incorreto! \n");
+
+    }else{
+        printf("Parabens jogo correto! Voce gastou %d minutos e %d segundos", minutes, seconds);
+    }
+}
+
+
+void printarTabuleiro(int tabuleiro[9][9]){
+    int contadorCol = 0;
+    int contadorLin = 0;
+
+    system("clear");
+    printf("\n+===+===+===+===+===+===+===+===+===+\n");
+    for(int i = 0; i < 9; i++){
+        for(int j = 0; j < 9; j++){
+        
+            if(i == 0 && j == 0){
+                contadorCol = 1;
+                if( tabuleiro[i][j] == 0){
+                    printf("\u2551   ");
+                }else{
+                    printf("\u2551 %d ", tabuleiro[i][j]);
+                }
+                continue;
+            }
+
+
+
+
+            if(contadorCol == 3){
+                contadorCol = 1;
+                if( tabuleiro[i][j] == 0){
+                    printf("\u2551   ");
+                }else{
+                    printf("\u2551 %d ", tabuleiro[i][j]);
+                }
+
+            }else{
+                if( tabuleiro[i][j] == 0){
+                    printf("|   ");
+                }else{
+                    printf("| %d ", tabuleiro[i][j]);
+                }
+                contadorCol++;
+            }
+            
+            
+        }
+        printf("\u2551");
+        if (contadorLin == 2){
+            contadorLin = 0;
+            printf("\n+===+===+===+===+===+===+===+===+===+\n");
+            continue;
+        }else{
+            printf("\n+---+---+---+---+---+---+---+---+---+\n");
+        }
+
+        contadorLin ++;
     }
 }
 
@@ -130,204 +294,74 @@ void criarMascara(int jogo[9][9], int mascara[9][9]){
         }
     }
 }
-void salvarArquivo(int jogo[9][9],int mascara[9][9], int jogoResolvido[9][9]){
-
-    FILE *arq;
-    arq = fopen("jogoSalvo.txt","w");
-
-    //Salvar o game
-    for(int i=0; i<9; i++){
-        for(int j=0; j<9; j++){
-            if(jogo[i][j] == 0){
-
-                fprintf(arq,".");    
-            }
-            else{
-                fprintf(arq,"%d",jogo[i][j]);
-            }
-        }
-        fprintf(arq,"\n");
-    }
-
-    fprintf(arq,"\n");
-
-    //Salvar a mascara
-    for(int i=0; i<9; i++){
-        for(int j=0; j<9; j++){
-            if(mascara[i][j] == 0){
-
-                fprintf(arq,".");    
-            }
-            else{
-                fprintf(arq,"%d",mascara[i][j]);
-            }
-        }
-        fprintf(arq,"\n");
-    }
-
-    fprintf(arq,"\n");
-
-    //Salva jogo resolvido
-    for(int i=0; i<9; i++){
-        for(int j=0; j<9; j++){
-               
-            fprintf(arq,"%d",jogoResolvido[i][j]);
-    
-        }
-        fprintf(arq,"\n");
-    }
-    fclose(arq);
-}
-void carregarJogo(int jogo[9][9], int mascara[9][9], int jogoResolvido[9][9]){
-
-    FILE *jogo_salvo;
-    jogo_salvo = fopen("jogoSalvo.txt","r");
-
-    char c;
-
-    for(int i = 0; i < 9; i++){
-        for(int j = 0; j < 9; j++){
-            fscanf(jogo_salvo,"%c", &c);
-            if(c == '.'){
-                jogo[i][j] = 0;
-
-            }else{
-                jogo[i][j] = atoi(&c);
-            }
-        }
-    }
-    //ler o \n
-    fscanf(jogo_salvo,"%c", &c);
-
-    // Ler máscara
-    for(int i = 0; i < 9; i++){
-        for(int j = 0; j < 9; j++){
-            fscanf(jogo_salvo,"%c", &c);
-            if(c == '.'){ 
-                mascara[i][j] = 0;
-            }else{
-                mascara[i][j] = atoi(&c);
-            }
-        }
-        fscanf(jogo_salvo,"%c", &c);
-    }
-    
-    //ler o \n
-    fscanf(jogo_salvo,"%c", &c);
-
-    for(int i = 0; i < 9; i++){
-        for(int j = 0; j < 9; j++){
-            fscanf(jogo_salvo,"%c", &c);
-            jogoResolvido[i][j] = atoi(&c);
-        }
-        fscanf(jogo_salvo,"%c", &c);
-    }
-}
 
 
-int conferir(int jogo[9][9], int jogoResolvido[9][9]){
-
-    for(int i = 0; i < 9; i++){
-        for(int j = 0; j < 9; j++){
-           if(jogoResolvido[i][j] != jogo[i][j]){
-                printf("A casa %d %d se encontra errada!\n", i+1, j+1);
-                printf("Digite uma tecla para continuar:\n");
-                char c;
-                setbuf(stdin,NULL);
-                scanf("%c",&c);
-                return 0;
-            }
-        }
-    }
-    return 1;
-}
 int main(){
-    FILE *table;
     
+    FILE *table;
+
     int jogo[9][9];
     int jogoResolvido[9][9];
     int mascara[9][9];
-    int r;
-
+    time_t start = time(NULL); 
+    int randomNumber;
     char nomeJogo[100];
-    
-    srand(time(NULL));
-    
 
-    int opcaoMenuInicial = 0;
     int opcaoMenuJogo;
 
-    while(opcaoMenuInicial != 3){
+    while(1){
+        int opcaoMenuInicial = menu();
 
-        opcaoMenuInicial = menu();
-        
         switch (opcaoMenuInicial){
-
-            case 1: // Carregar game
-                carregarJogo(jogo, mascara, jogoResolvido);
-                opcaoMenuJogo = 0;
-            break;
-
-            case 2: //jogo Alertório
-
-                r = rand() %5;
-                sprintf(nomeJogo , "table%d.txt",r+1);
+            case 1:
+                carregarJogo(jogo, mascara, jogoResolvido, start);
+                break;
+            case 2: //jogo novo
+                randomNumber = rand() %5;
+                sprintf(nomeJogo , "table%d.txt", randomNumber+1);
                 table = fopen(nomeJogo, "r");
-
                 lerArquivo(table, jogo, jogoResolvido);
                 criarMascara(jogo, mascara);
-                opcaoMenuJogo = 0;
-            break;
-
-            case 3:
-                return 0;
-            break;
-
+                break;
             default:
-                printf("OP inválida\n");
-            break;
-        }
-        
-        while(opcaoMenuJogo != 6){
+                return 0;
+                break;
+        }   
 
+        do {
             printarTabuleiro(jogo);
             opcaoMenuJogo = menuJogada(jogo);
-
             switch (opcaoMenuJogo){
-                
                 case 1: //adicionar jogada
                     adicionarJogada(jogo,mascara);
-                    printarTabuleiro(jogo);
-                break;
 
+                    break;
                 case 2: //remover jogada
                     removerJogada(jogo, mascara);
-                    printarTabuleiro(jogo);
-                break;
-
-                case 3: //salvar]
-                    salvarArquivo(jogo,mascara,jogoResolvido);
-                break;
-                case 4:
-                    if(conferir(jogo, jogoResolvido) != 0){
-                        printf("----------------------------\n");
-                        printf("\nPARABÉNS JOGO CORRETO!\n");
-                        printf("----------------------------\n");
-                        opcaoMenuJogo = 6;
-                    }
                     break;
-                case 5:
-                    printarTabuleiro(jogoResolvido);
-                break;
-                case 6:
-                    printf("voltando\n");
-                break;
-                default:
-                    printf("OP inválida\n");
-                break;
+                case 3: //salvar
+                    salvarJogo(jogo,jogoResolvido,mascara);
+                    break;
+                case 4: //voltar
+                    break;
+                case 5: //Conferir
+                    conferirJogo(jogo, jogoResolvido, start);
+                    char c;
+                    setbuf(stdin,NULL);
+                    scanf("%c" , &c);
+                    break;
+
+                default: //sair
+                    return 0;
+                    break;
             }
-        }
+
+        }while(opcaoMenuJogo == 1 || opcaoMenuJogo == 2 || opcaoMenuJogo == 3 || opcaoMenuJogo == 5);
+        
     }
+    
+
     fclose(table);
     return 0;
+
 }
